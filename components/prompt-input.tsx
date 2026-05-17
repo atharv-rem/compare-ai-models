@@ -6,10 +6,11 @@ import mic from "../public/Vector.svg";
 import stop from "../public/stop.svg";
 import GitCompareIcon from "@/components/ui/compare-animated-icon";
 import AudioLinesIcon from "@/components/ui/listening-waveform";
+import { Plus } from "lucide-react";
 
-import { useRef, useEffect, useState } from "react";
+import {useEffect } from "react";
 
-interface PromptInputProps {
+type PromptInputProps = {
   value: string;
   setValue: (value: string) => void;
   isFocused: boolean;
@@ -22,7 +23,6 @@ interface PromptInputProps {
   gitCompareRef: React.RefObject<any>;
   handleCompareClick: () => void;
   handleNewChat: () => void;
-  handleExitCompare: () => void;
   startListening: () => void;
   stopListening: () => void;
 }
@@ -40,10 +40,11 @@ export function PromptInput({
   gitCompareRef,
   handleCompareClick,
   handleNewChat,
-  handleExitCompare,
   startListening,
   stopListening
 }: PromptInputProps) {
+  
+  // Auto-resize textarea based on content
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea && isFocused) {
@@ -54,11 +55,9 @@ export function PromptInput({
   }, [value, isFocused, textareaRef]);
 
   return (
-    <motion.div 
-      className="relative"
-      layout
-      transition={{ duration: 0.5, ease: "easeInOut" }}
-    >
+    <motion.div className="relative" layout transition={{ duration: 0.5, ease: "easeInOut" }}>
+
+      {/* Placeholder text */}
       {!isFocused && value === "" && !isListening && !isCompareMode && (
         <div className="absolute top-[15px] left-[22px] pointer-events-none z-10">
           <AnimatePresence mode="wait">
@@ -75,14 +74,16 @@ export function PromptInput({
           </AnimatePresence>
         </div>
       )}
-
+      
+      {/* Listening indicator */}
       {isListening && value === "" && (
         <div className="absolute top-[18px] left-[22px] pointer-events-none z-10 flex items-center gap-2">
           <AudioLinesIcon size={20} active={true} />
           <p className="text-[14px] text-[#949494]">Listening...</p>
         </div>
       )}
-
+      
+      {/* Textarea and buttons */}
       <div className="w-full rounded-[15px] border-[1.5px] border-[#F5F5F5] p-3 bg-white/60 backdrop-blur-sm flex flex-col transition-all focus-within:border-[#949494] outline-none shadow-none">
         <label htmlFor="prompt" className="text-[13px] text-[#949494] mb-1 hidden">Enter your prompt</label>
         <textarea
@@ -101,7 +102,9 @@ export function PromptInput({
         />
         
         <div className="flex flex-row items-center justify-between mt-[15px] w-full">
+          
           <div className="flex flex-row items-center gap-2">
+            {/* Model labels and Compare button */}
             {!isCompareMode && (
               <>
                 <div className="flex flex-row items-center px-2 py-1 border-[1.5px] border-[#F5F5F5] rounded-[10px] gap-2">
@@ -114,24 +117,20 @@ export function PromptInput({
                 </div>
               </>
             )}
+            {/* New Chat button in compare mode */}
             {isCompareMode && (
               <button
                 onClick={handleNewChat}
                 className="flex items-center gap-2 px-3 py-1.5 border-[1.5px] border-[#F5F5F5] rounded-[10px] hover:bg-[#F5F5F5] transition-colors text-[12px]"
               >
-                + New Chat
+                <Plus size={16} />  
+                New Chat
               </button>
             )}
           </div>
+
           <div className="flex flex-row items-center gap-2">
-            {isCompareMode && (
-              <button
-                onClick={handleExitCompare}
-                className="flex items-center gap-2 px-3 py-1.5 border-[1.5px] border-[#F5F5F5] rounded-[10px] hover:bg-[#F5F5F5] transition-colors text-[12px]"
-              >
-                ← Exit Compare
-              </button>
-            )}
+            {/* Compare button */}
             {!isCompareMode && (
               <button 
                 onClick={handleCompareClick}
@@ -144,6 +143,7 @@ export function PromptInput({
                 <p className="text-center text-[12px]">Compare</p>
               </button>
             )}
+
             <button
               onClick={isListening ? stopListening : startListening}
               aria-label={isListening ? "Stop voice input" : "Start voice input"}

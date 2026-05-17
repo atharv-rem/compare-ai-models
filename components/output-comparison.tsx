@@ -2,14 +2,15 @@ import { motion, AnimatePresence } from "motion/react";
 import Image from "next/image";
 import sarvam30b from "../public/sarvam30b.png";
 import sarvam105b from "../public/sarvam105b.png";
+import UnicodeSpinner from "./ui/unicode-spinner";
 
-interface Chat {
+type Chat = {
   id: number;
   prompt: string;
   outputs: { model1: string; model2: string; };
 }
 
-interface OutputComparisonProps {
+type OutputComparisonProps = {
   isCompareMode: boolean;
   currentChat?: Chat;
 }
@@ -38,7 +39,10 @@ export function OutputComparison({ isCompareMode, currentChat }: OutputCompariso
             </div>
             <div className="text-[14px] text-gray-700 min-h-[200px] max-h-[400px] overflow-y-auto whitespace-pre-wrap">
               {currentChat.outputs.model1 || (
+                <>
+                <UnicodeSpinner name="orbit" className="text-gray-400" />
                 <p className="text-[#949494] italic">Waiting for response...</p>
+                </>
               )}
             </div>
           </motion.div>
@@ -56,7 +60,10 @@ export function OutputComparison({ isCompareMode, currentChat }: OutputCompariso
             </div>
             <div className="text-[14px] text-gray-700 min-h-[200px] max-h-[400px] overflow-y-auto whitespace-pre-wrap">
               {currentChat.outputs.model2 || (
+                <>
+                <UnicodeSpinner name="orbit" className="text-gray-400" />
                 <p className="text-[#949494] italic">Waiting for response...</p>
+                </>
               )}
             </div>
           </motion.div>

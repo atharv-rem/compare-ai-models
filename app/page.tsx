@@ -15,6 +15,7 @@ export default function Home() {
     "Summarize this meeting into action items",
     "Explain recursion using a real-world analogy"
   ];
+
   const [currentPrompt, setCurrentPrompt] = useState(0);
   const [isCompareMode, setIsCompareMode] = useState(false);
   const [chats, setChats] = useState([{ id: 1, prompt: "", outputs: { model1: "", model2: "" } }]);
@@ -26,6 +27,7 @@ export default function Home() {
 
   const { transcript, isListening, startListening, stopListening } = useSpeechRecognition();
 
+  // Cycle through mock prompts every 2 seconds initially
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentPrompt((prevIndex) => (prevIndex + 1) % mockprompts.length);
@@ -34,12 +36,14 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [mockprompts.length]);
 
+  // Update value with transcript when listening
   useEffect(() => {
     if (transcript && isListening) {
       setValue(transcript);
     }
   }, [transcript, isListening]);
 
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Focus text input on '/'
@@ -63,6 +67,7 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isListening, startListening, stopListening]);
 
+  // Handle compare button click
   const handleCompareClick = async () => {
     setIsCompareMode(true);
     const currentPromptValue = value;
@@ -132,19 +137,13 @@ export default function Home() {
     }
   };
 
+  // Handle new chat button click
   const handleNewChat = () => {
     const newChatId = chats.length + 1;
     setChats(prev => [...prev, { id: newChatId, prompt: "", outputs: { model1: "", model2: "" } }]);
     setActiveChat(newChatId);
     setValue("");
     setIsCompareMode(false);
-  };
-
-  const handleExitCompare = () => {
-    setIsCompareMode(false);
-    setValue("");
-    setChats([{ id: 1, prompt: "", outputs: { model1: "", model2: "" } }]);
-    setActiveChat(1);
   };
 
   const currentChat = chats.find(chat => chat.id === activeChat);
@@ -180,17 +179,13 @@ export default function Home() {
           gitCompareRef={gitCompareRef}
           handleCompareClick={handleCompareClick}
           handleNewChat={handleNewChat}
-          handleExitCompare={handleExitCompare}
           startListening={startListening}
           stopListening={stopListening}
         />
 
         {!isCompareMode && <ShortcutHints />}
 
-        <OutputComparison 
-          isCompareMode={isCompareMode}
-          currentChat={currentChat}
-        />
+        <OutputComparison isCompareMode={isCompareMode} currentChat={currentChat}/>
       </motion.div>
     </main>
   );
