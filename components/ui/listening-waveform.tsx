@@ -2,7 +2,7 @@
 
 import { motion, useAnimation } from "motion/react";
 import type { HTMLAttributes } from "react";
-import { forwardRef, useCallback, useImperativeHandle, useRef } from "react";
+import { forwardRef, useCallback, useImperativeHandle, useRef, useEffect } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -13,12 +13,21 @@ export interface AudioLinesIconHandle {
 
 interface AudioLinesIconProps extends HTMLAttributes<HTMLDivElement> {
   size?: number;
+  active?: boolean;
 }
 
 const AudioLinesIcon = forwardRef<AudioLinesIconHandle, AudioLinesIconProps>(
-  ({ onMouseEnter, onMouseLeave, className, size = 28, ...props }, ref) => {
+  ({ onMouseEnter, onMouseLeave, className, size = 28, active = false, ...props }, ref) => {
     const controls = useAnimation();
     const isControlledRef = useRef(false);
+
+    useEffect(() => {
+      if (active) {
+        controls.start("animate");
+      } else if (!isControlledRef.current) {
+        controls.start("normal");
+      }
+    }, [active, controls]);
 
     useImperativeHandle(ref, () => {
       isControlledRef.current = true;
