@@ -22,6 +22,15 @@ export default function Home() {
   const [activeChat, setActiveChat] = useState(1);
   const [value, setValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
+  const [tokenCounts, setTokenCounts] = useState<{ [key: number]: { model1: number, model2: number } }>({
+    1: { model1: 0, model2: 0 }
+  });
+  const [tokensPerSecond, setTokensPerSecond] = useState<{ [key: number]: { model1: number, model2: number } }>({
+    1: { model1: 0, model2: 0 }
+  });
+  const [executionTimes, setExecutionTimes] = useState<{ [key: number]: { model1: number, model2: number } }>({
+    1: { model1: 0, model2: 0 }
+  });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const gitCompareRef = useRef<{ startAnimation: () => void; stopAnimation: () => void }>(null);
 
@@ -61,11 +70,35 @@ export default function Home() {
           startListening();
         }
       }
+
+      // Cycle chats with Ctrl/Cmd + Left/Right Arrow
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        setChats(currentChats => {
+          if (currentChats.length <= 1) return currentChats;
+          const currentIndex = currentChats.findIndex(c => c.id === activeChat);
+          let newIndex;
+          if (e.key === 'ArrowRight') {
+            newIndex = (currentIndex + 1) % currentChats.length;
+          } else {
+            newIndex = (currentIndex - 1 + currentChats.length) % currentChats.length;
+          }
+          const nextChat = currentChats[newIndex];
+          setActiveChat(nextChat.id);
+          setValue(nextChat.prompt);
+          return currentChats;
+        });
+      }
+
+      // New Chat shortcut: Ctrl/Cmd + K
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        handleNewChat();
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isListening, startListening, stopListening]);
+  }, [isListening, startListening, stopListening, activeChat]); // Added activeChat dependency
 
   // Handle compare button click
   const handleCompareClick = async () => {
@@ -79,32 +112,39 @@ export default function Home() {
     ));
 
     try {
-      const [res1, res2] = await Promise.all([
-        fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "sarvam-30b", message: currentPromptValue })
-        }),
-        fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "sarvam-105b", message: currentPromptValue })
-        })
-      ]);
-
-      const reader1 = res1.body?.getReader();
-      const reader2 = res2.body?.getReader();
-
       const readStream = async (reader: ReadableStreamDefaultReader<Uint8Array> | undefined, modelKey: "model1" | "model2") => {
         if (!reader) return;
         const decoder = new TextDecoder();
+        const startTime = Date.now();
+        let currentTokenCount = 0;
         
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           
           const chunk = decoder.decode(value, { stream: true });
+          const newTokens = chunk.trim().split(/\s+/).filter(Boolean).length;
+          currentTokenCount += newTokens;
+
+          const elapsedSeconds = (Date.now() - startTime) / 1000;
+          const tps = elapsedSeconds > 0 ? currentTokenCount / elapsedSeconds : 0;
           
+          setTokenCounts(prev => ({
+            ...prev,
+            [activeChat]: {
+              ...prev[activeChat],
+              [modelKey]: prev[activeChat][modelKey] + newTokens
+            }
+          }));
+
+          setTokensPerSecond(prev => ({
+            ...prev,
+            [activeChat]: {
+              ...prev[activeChat],
+              [modelKey]: Number(tps.toFixed(1))
+            }
+          }));
+
           setChats(prev => prev.map(chat => 
             chat.id === activeChat 
               ? { 
@@ -116,12 +156,30 @@ export default function Home() {
                 }
               : chat
           ));
+
+          setExecutionTimes(prev => ({
+            ...prev,
+            [activeChat]: {
+              ...prev[activeChat],
+              [modelKey]: Number(elapsedSeconds.toFixed(1))
+            }
+          }));
         }
       };
 
+      const fetchAndStream = async (model: string, modelKey: "model1" | "model2") => {
+        const res = await fetch(`/api/chat?t=${Date.now()}&m=${modelKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model, message: currentPromptValue })
+        });
+        const reader = res.body?.getReader();
+        return readStream(reader, modelKey);
+      };
+
       await Promise.all([
-        readStream(reader1, "model1"),
-        readStream(reader2, "model2")
+        fetchAndStream("sarvam-30b", "model1"),
+        fetchAndStream("sarvam-105b", "model2")
       ]);
 
     } catch (error) {
@@ -141,6 +199,18 @@ export default function Home() {
   const handleNewChat = () => {
     const newChatId = chats.length + 1;
     setChats(prev => [...prev, { id: newChatId, prompt: "", outputs: { model1: "", model2: "" } }]);
+    setTokenCounts(prev => ({
+      ...prev,
+      [newChatId]: { model1: 0, model2: 0 }
+    }));
+    setTokensPerSecond(prev => ({
+      ...prev,
+      [newChatId]: { model1: 0, model2: 0 }
+    }));
+    setExecutionTimes(prev => ({
+      ...prev,
+      [newChatId]: { model1: 0, model2: 0 }
+    }));
     setActiveChat(newChatId);
     setValue("");
     setIsCompareMode(false);
@@ -149,8 +219,13 @@ export default function Home() {
   const currentChat = chats.find(chat => chat.id === activeChat);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
-      <h1 className="text-[25px] font-main">compare model outputs in realtime</h1>
+    <main 
+      className={`flex min-h-screen flex-col items-center px-4 py-8 transition-colors duration-500 ${isCompareMode ? "justify-start bg-white" : "justify-center"}`}
+      style={!isCompareMode ? { backgroundImage: "url('/background.png')", backgroundSize: "cover", backgroundPosition: "center" } : {}}
+    >
+      {!isCompareMode && (
+        <h1 className="text-[25px] font-main text-center">compare model outputs in realtime</h1>
+      )}
       
       <motion.div 
         className="mt-5 w-full"
@@ -185,7 +260,13 @@ export default function Home() {
 
         {!isCompareMode && <ShortcutHints />}
 
-        <OutputComparison isCompareMode={isCompareMode} currentChat={currentChat}/>
+        <OutputComparison 
+          isCompareMode={isCompareMode} 
+          currentChat={currentChat}
+          tokenCounts={tokenCounts[activeChat] || { model1: 0, model2: 0 }}
+          tokensPerSecond={tokensPerSecond[activeChat] || { model1: 0, model2: 0 }}
+          executionTimes={executionTimes[activeChat] || { model1: 0, model2: 0 }}
+        />
       </motion.div>
     </main>
   );

@@ -67,7 +67,7 @@ export function PromptInput({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.3 }}
-              className="text-[15px] text-[#949494]"
+              className="text-[15px] text-[#595959]"
             >
               {mockprompts[currentPrompt]}
             </motion.p>
@@ -79,13 +79,13 @@ export function PromptInput({
       {isListening && value === "" && (
         <div className="absolute top-[18px] left-[22px] pointer-events-none z-10 flex items-center gap-2">
           <AudioLinesIcon size={20} active={true} />
-          <p className="text-[14px] text-[#949494]">Listening...</p>
+          <p className="text-[14px] text-[#595959]">Listening...</p>
         </div>
       )}
       
       {/* Textarea and buttons */}
-      <div className="w-full rounded-[15px] border-[1.5px] border-[#F5F5F5] p-3 bg-white/60 backdrop-blur-sm flex flex-col transition-all focus-within:border-[#949494] outline-none shadow-none">
-        <label htmlFor="prompt" className="text-[13px] text-[#949494] mb-1 hidden">Enter your prompt</label>
+      <div className="w-full rounded-[15px] border-[1.5px] border-[#F5F5F5] p-3 bg-white/60 backdrop-blur-sm flex flex-col transition-all focus-within:border-[#595959] outline-none shadow-none">
+        <label htmlFor="prompt" className="sr-only">Enter your prompt</label>
         <textarea
           id="prompt"
           ref={textareaRef as any}
@@ -93,6 +93,14 @@ export function PromptInput({
           onChange={(e) => setValue(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              if (value.trim()) {
+                handleCompareClick();
+              }
+            }
+          }}
           className="w-full resize-none bg-transparent text-[15px] focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:outline-none transition-all overflow-y-auto min-h-[40px] border-none"
           style={{
             height: isFocused || value !== "" ? "auto" : "40px",
@@ -101,9 +109,9 @@ export function PromptInput({
           rows={1}
         />
         
-        <div className="flex flex-row items-center justify-between mt-[15px] w-full">
+        <div className="flex flex-row items-center justify-between mt-[15px] w-full gap-2 flex-wrap sm:flex-nowrap">
           
-          <div className="flex flex-row items-center gap-2">
+          <div className="flex flex-row items-center gap-2 flex-wrap">
             {/* Model labels and Compare button */}
             {!isCompareMode && (
               <>
@@ -121,7 +129,7 @@ export function PromptInput({
             {isCompareMode && (
               <button
                 onClick={handleNewChat}
-                className="flex items-center gap-2 px-3 py-1.5 border-[1.5px] border-[#F5F5F5] rounded-[10px] hover:bg-[#F5F5F5] transition-colors text-[12px]"
+                className="flex items-center gap-2 px-3 py-1.5 border-[1.5px] border-[#F5F5F5] rounded-[10px] hover:bg-[#F5F5F5] focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none transition-colors text-[12px]"
               >
                 <Plus size={16} />  
                 New Chat
@@ -136,7 +144,7 @@ export function PromptInput({
                 onClick={handleCompareClick}
                 onMouseEnter={() => gitCompareRef.current?.startAnimation()}
                 onMouseLeave={() => gitCompareRef.current?.stopAnimation()}
-                className="flex flex-row items-center px-2 py-1 border-[1.5px] border-[#F5F5F5] rounded-[10px] gap-2 justify-center hover:bg-[#F5F5F5] transition-colors"
+                className="flex flex-row items-center px-2 py-1 border-[1.5px] border-[#F5F5F5] rounded-[10px] gap-2 justify-center hover:bg-[#F5F5F5] focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!value.trim()}
               >
                 <GitCompareIcon ref={gitCompareRef as any} size={16} />
@@ -148,7 +156,8 @@ export function PromptInput({
               onClick={isListening ? stopListening : startListening}
               aria-label={isListening ? "Stop voice input" : "Start voice input"}
               title={isListening ? "Stop voice input" : "Start voice input"}
-              className="flex flex-row items-center px-2 py-1 border-[1.5px] border-[#F5F5F5] rounded-[10px] justify-center p-1">
+              className="flex flex-row items-center px-2 py-1 border-[1.5px] border-[#F5F5F5] rounded-[10px] justify-center p-1 focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none hover:bg-[#F5F5F5] transition-colors"
+            >
               {isListening ? (
                 <Image src={stop} alt="Stop Voice Input" width={13} height={13} />
               ) : (

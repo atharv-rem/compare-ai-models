@@ -6,23 +6,47 @@ export function ShortcutHints() {
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="mt-4 flex items-center justify-center gap-6 text-[12px] text-[#949494]"
+      className="mt-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[12px] text-[#595959] px-4"
     >
       <div className="flex items-center gap-2">
-        <span>Text Input</span>
+        <span>Prompt</span>
         <Kbd>/</Kbd>
       </div>
       <div className="flex items-center gap-2">
-        <span>Voice Input</span>
+        <span>Submit</span>
+        <KbdGroup>
+          <Kbd>Enter</Kbd>
+        </KbdGroup>
+      </div>
+      <div className="flex items-center gap-2">
+        <span>Voice</span>
         <div className="flex items-center gap-1">
-          <KbdGroup>
-            <Kbd>Ctrl</Kbd>
-            <Kbd>M</Kbd>
-          </KbdGroup>
-          <span>or</span>
           <KbdGroup>
             <Kbd>⌘</Kbd>
             <Kbd>M</Kbd>
+          </KbdGroup>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <span>New Chat</span>
+        <div className="flex items-center gap-1">
+          <KbdGroup>
+            <Kbd>⌘</Kbd>
+            <Kbd>K</Kbd>
+          </KbdGroup>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <span>Switch Tabs</span>
+        <div className="flex items-center gap-1">
+          <KbdGroup>
+            <Kbd>⌘</Kbd>
+            <Kbd>←</Kbd>
+          </KbdGroup>
+          <span>/</span>
+          <KbdGroup>
+            <Kbd>⌘</Kbd>
+            <Kbd>→</Kbd>
           </KbdGroup>
         </div>
       </div>
