@@ -118,80 +118,110 @@ export default function Home() {
         const startTime = Date.now();
         let currentTokenCount = 0;
         
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value, { stream: true });
-          const newTokens = chunk.trim().split(/\s+/).filter(Boolean).length;
-          currentTokenCount += newTokens;
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value, { stream: true });
+            const newTokens = chunk.trim().split(/\s+/).filter(Boolean).length;
+            currentTokenCount += newTokens;
 
-          const elapsedSeconds = (Date.now() - startTime) / 1000;
-          const tps = elapsedSeconds > 0 ? currentTokenCount / elapsedSeconds : 0;
-          
-          setTokenCounts(prev => ({
-            ...prev,
-            [activeChat]: {
-              ...prev[activeChat],
-              [modelKey]: prev[activeChat][modelKey] + newTokens
-            }
-          }));
+            const elapsedSeconds = (Date.now() - startTime) / 1000;
+            const tps = elapsedSeconds > 0 ? currentTokenCount / elapsedSeconds : 0;
+            
+            setTokenCounts(prev => ({
+              ...prev,
+              [activeChat]: {
+                ...prev[activeChat],
+                [modelKey]: prev[activeChat][modelKey] + newTokens
+              }
+            }));
 
-          setTokensPerSecond(prev => ({
-            ...prev,
-            [activeChat]: {
-              ...prev[activeChat],
-              [modelKey]: Number(tps.toFixed(1))
-            }
-          }));
+            setTokensPerSecond(prev => ({
+              ...prev,
+              [activeChat]: {
+                ...prev[activeChat],
+                [modelKey]: Number(tps.toFixed(1))
+              }
+            }));
 
+            setChats(prev => prev.map(chat => 
+              chat.id === activeChat 
+                ? { 
+                    ...chat, 
+                    outputs: { 
+                      ...chat.outputs,
+                      [modelKey]: chat.outputs[modelKey] + chunk
+                    } 
+                  }
+                : chat
+            ));
+
+            setExecutionTimes(prev => ({
+              ...prev,
+              [activeChat]: {
+                ...prev[activeChat],
+                [modelKey]: Number(elapsedSeconds.toFixed(1))
+              }
+            }));
+          }
+        } catch (streamError) {
+          console.error(`Stream interrupted for ${modelKey}:`, streamError);
           setChats(prev => prev.map(chat => 
             chat.id === activeChat 
               ? { 
                   ...chat, 
                   outputs: { 
                     ...chat.outputs,
-                    [modelKey]: chat.outputs[modelKey] + chunk
+                    [modelKey]: chat.outputs[modelKey] + "\n\n[Warning: Stream interrupted. Partial output preserved.]"
                   } 
                 }
               : chat
           ));
-
-          setExecutionTimes(prev => ({
-            ...prev,
-            [activeChat]: {
-              ...prev[activeChat],
-              [modelKey]: Number(elapsedSeconds.toFixed(1))
-            }
-          }));
         }
       };
 
       const fetchAndStream = async (model: string, modelKey: "model1" | "model2") => {
-        const res = await fetch(`/api/chat?t=${Date.now()}&m=${modelKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model, message: currentPromptValue })
-        });
-        const reader = res.body?.getReader();
-        return readStream(reader, modelKey);
+        try {
+          const res = await fetch(`/api/chat?t=${Date.now()}&m=${modelKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ model, message: currentPromptValue })
+          });
+          
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+          
+          const reader = res.body?.getReader();
+          await readStream(reader, modelKey);
+        } catch (fetchError) {
+          console.error(`Fetch failed for ${modelKey}:`, fetchError);
+          setChats(prev => prev.map(chat => 
+            chat.id === activeChat 
+              ? { 
+                  ...chat, 
+                  outputs: { 
+                    ...chat.outputs,
+                    [modelKey]: chat.outputs[modelKey] 
+                      ? chat.outputs[modelKey] + "\n\n[Error: Connection dropped.]"
+                      : "[Error: Failed to connect to API.]"
+                  } 
+                }
+              : chat
+          ));
+        }
       };
 
-      await Promise.all([
+      await Promise.allSettled([
         fetchAndStream("sarvam-30b", "model1"),
         fetchAndStream("sarvam-105b", "model2")
       ]);
 
     } catch (error) {
-      console.error("Failed to fetch responses:", error);
-      setChats(prev => prev.map(chat => 
-        chat.id === activeChat 
-          ? { 
-              ...chat, 
-              outputs: { model1: "Failed to connect to API.", model2: "Failed to connect to API." } 
-            }
-          : chat
-      ));
+      console.error("Unexpected error during compare operation:", error);
+      // We no longer overwrite the entire state since fetchAndStream handles its own errors gracefully.
     }
   };
 
