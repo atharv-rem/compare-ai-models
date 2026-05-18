@@ -31,6 +31,49 @@ export default function Home() {
   const [executionTimes, setExecutionTimes] = useState<{ [key: number]: { model1: number, model2: number } }>({
     1: { model1: 0, model2: 0 }
   });
+  const [isClient, setIsClient] = useState(false);
+
+  // Load from local storage
+  useEffect(() => {
+    setIsClient(true);
+    const savedChats = localStorage.getItem("compare-chats-data");
+    if (savedChats) {
+      try {
+        const parsed = JSON.parse(savedChats);
+        if (parsed.chats && parsed.chats.length > 0) {
+          setChats(parsed.chats);
+          setActiveChat(parsed.activeChat || 1);
+          if (parsed.tokenCounts) setTokenCounts(parsed.tokenCounts);
+          if (parsed.tokensPerSecond) setTokensPerSecond(parsed.tokensPerSecond);
+          if (parsed.executionTimes) setExecutionTimes(parsed.executionTimes);
+          
+          const current = parsed.chats.find((c: any) => c.id === (parsed.activeChat || 1));
+          if (current) {
+            setValue(current.prompt);
+            if (current.outputs.model1 || current.outputs.model2) {
+              setIsCompareMode(true);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse local storage", e);
+      }
+    }
+  }, []);
+
+  // Save to local storage
+  useEffect(() => {
+    if (isClient) {
+      localStorage.setItem("compare-chats-data", JSON.stringify({
+        chats,
+        activeChat,
+        tokenCounts,
+        tokensPerSecond,
+        executionTimes
+      }));
+    }
+  }, [chats, activeChat, tokenCounts, tokensPerSecond, executionTimes, isClient]);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const gitCompareRef = useRef<{ startAnimation: () => void; stopAnimation: () => void }>(null);
 

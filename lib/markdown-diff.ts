@@ -1,351 +1,102 @@
-export type BlockType =
-  | "heading"
-  | "paragraph"
-  | "list"
-  | "code"
-  | "table"
-  | "inlineCode";
-
-export type MarkdownBlock = {
-  type: BlockType;
-  content: string;
-  level?: number;
+export type DiffToken = {
+  key: string;
+  text: string;
+  leading: string;
 };
 
 export type DiffPart = {
-  value: string[];
-  added?: boolean;
-  removed?: boolean;
-};
-
-export type BlockDiff = {
-  leftBlock?: MarkdownBlock;
-  rightBlock?: MarkdownBlock;
-  parts: DiffPart[];
+  kind: "unchanged" | "added" | "removed";
+  left: DiffToken[];
+  right: DiffToken[];
 };
 
 export type DisplayPart = {
-  value: string[];
+  tokens: DiffToken[];
   kind: "unchanged" | "added" | "removed";
   replaced?: boolean;
   groupId?: string;
+  otherTokens?: DiffToken[];
 };
 
-type PairedPart =
+type PairedDisplayPart =
   | { type: "unchanged"; part: DiffPart }
   | { type: "added"; part: DiffPart }
   | { type: "removed"; part: DiffPart }
-  | { type: "replace"; removed: DiffPart; added: DiffPart };
-
-function pairReplacements(parts: DiffPart[]): PairedPart[] {
-  const paired: PairedPart[] = [];
-  
-  for (let i = 0; i < parts.length; i++) {
-    const current = parts[i];
-    
-    if (!current.added && !current.removed) {
-      paired.push({ type: "unchanged", part: current });
-      continue;
-    }
-
-    if (current.removed && i + 1 < parts.length && parts[i + 1].added) {
-      paired.push({ type: "replace", removed: current, added: parts[i + 1] });
-      i++;
-      continue;
-    }
-
-    paired.push(
-      current.removed
-        ? { type: "removed", part: current }
-        : { type: "added", part: current }
-    );
-  }
-
-  return paired;
-}
-
-export function toDisplayParts(
-  parts: DiffPart[],
-  side: "left" | "right"
-): DisplayPart[] {
-  const grouped = pairReplacements(parts);
-  const display: DisplayPart[] = [];
-  let replacementIndex = 0;
-
-  for (const item of grouped) {
-    if (item.type === "unchanged") {
-      display.push({
-        value: item.part.value,
-        kind: "unchanged",
-      });
-      continue;
-    }
-
-    if (item.type === "removed") {
-      if (side === "left") {
-        display.push({
-          value: item.part.value,
-          kind: "removed",
-        });
-      }
-      continue;
-    }
-
-    if (item.type === "added") {
-      if (side === "right") {
-        display.push({
-          value: item.part.value,
-          kind: "added",
-        });
-      }
-      continue;
-    }
-
-    if (item.type === "replace") {
-      const groupId = `replace-${replacementIndex++}`;
-
-      if (side === "left") {
-        display.push({
-          value: item.removed.value,
-          kind: "removed",
-          replaced: true,
-          groupId,
-        });
-      } else {
-        display.push({
-          value: item.added.value,
-          kind: "added",
-          replaced: true,
-          groupId,
-        });
-      }
-    }
-  }
-
-  return mergeDisplayParts(display);
-}
-
-type Chunk = {
-  left: string[];
-  right: string[];
-};
+  | { type: "replace"; part: DiffPart; next: DiffPart };
 
 export function normalizeMarkdown(input: string): string {
   return input
     .replace(/\r\n/g, "\n")
     .replace(/[ \t]+$/gm, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/__(.*?)__/g, "**$1**")
+    .replace(/\u00A0/g, " ")
     .trim();
 }
 
-export function parseMarkdownBlocks(markdown: string): MarkdownBlock[] {
-  const lines = normalizeMarkdown(markdown).split("\n");
-  const blocks: MarkdownBlock[] = [];
+function normalizeTokenText(text: string): string {
+  return text.trim().toLowerCase();
+}
 
+export function tokenize(content: string): DiffToken[] {
+  const tokens: DiffToken[] = [];
+  const source = content.replace(/\r\n/g, "\n");
   let i = 0;
 
-  while (i < lines.length) {
-    const line = lines[i];
-
-    if (!line.trim()) {
+  while (i < source.length) {
+    let leading = "";
+    while (i < source.length && /\s/.test(source[i])) {
+      leading += source[i];
       i++;
-      continue;
     }
 
-    if (/^#{1,6}\s+/.test(line)) {
-      const match = line.match(/^(#{1,6})\s+(.*)$/);
-      if (match) {
-        blocks.push({
-          type: "heading",
-          level: match[1].length,
-          content: match[2].trim(),
-        });
+    if (i >= source.length) break;
+
+    let text = source[i];
+
+    if (source[i] === "`") {
+      let j = i + 1;
+      while (j < source.length && source[j] !== "`") {
+        j++;
       }
-      i++;
-      continue;
-    }
-
-    if (/^```/.test(line)) {
-      const codeLines: string[] = [];
-      i++;
-      while (i < lines.length && !/^```/.test(lines[i])) {
-        codeLines.push(lines[i]);
-        i++;
+      text = source.slice(i, Math.min(j + 1, source.length));
+      i = Math.min(j + 1, source.length);
+    } else if (/[A-Za-z0-9]/.test(source[i])) {
+      let j = i + 1;
+      while (j < source.length && /[A-Za-z0-9'_-]/.test(source[j])) {
+        j++;
       }
-      i++;
-      blocks.push({
-        type: "code",
-        content: codeLines.join("\n"),
-      });
-      continue;
-    }
-
-    if (/^\|.*\|$/.test(line)) {
-      const tableLines: string[] = [line];
-      i++;
-      while (i < lines.length && /^\|.*\|$/.test(lines[i])) {
-        tableLines.push(lines[i]);
-        i++;
-      }
-      blocks.push({
-        type: "table",
-        content: tableLines.join("\n"),
-      });
-      continue;
-    }
-
-    if (/^(\s*[-*+]|\s*\d+\.)\s+/.test(line)) {
-      const listLines: string[] = [line];
-      i++;
-      while (i < lines.length && /^(\s*[-*+]|\s*\d+\.)\s+/.test(lines[i])) {
-        listLines.push(lines[i]);
-        i++;
-      }
-      blocks.push({
-        type: "list",
-        content: listLines.join("\n"),
-      });
-      continue;
-    }
-
-    const paragraphLines: string[] = [line];
-    i++;
-    while (
-      i < lines.length &&
-      lines[i].trim() &&
-      !/^#{1,6}\s+/.test(lines[i]) &&
-      !/^```/.test(lines[i]) &&
-      !/^\|.*\|$/.test(lines[i]) &&
-      !/^(\s*[-*+]|\s*\d+\.)\s+/.test(lines[i])
-    ) {
-      paragraphLines.push(lines[i]);
+      text = source.slice(i, j);
+      i = j;
+    } else {
       i++;
     }
 
-    blocks.push({
-      type: "paragraph",
-      content: paragraphLines.join(" "),
+    tokens.push({
+      text,
+      leading,
+      key: normalizeTokenText(text) || text,
     });
   }
 
-  return blocks;
+  return tokens;
 }
 
-export function tokenize(text: string): string[] {
-  const tokens = text.match(
-    /`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|~~[^~]+~~|\w+(?:'\w+)?|[^\s\w]/g
-  );
-  return tokens ?? [];
-}
-
-function frequencyMap(tokens: string[]): Map<string, number> {
-  const map = new Map<string, number>();
-  for (const token of tokens) {
-    map.set(token, (map.get(token) ?? 0) + 1);
-  }
-  return map;
-}
-
-function isGoodAnchor(token: string): boolean {
-  if (!token.trim()) return false;
-  if (token.length < 3) return false;
-  if (/^[\W_]+$/.test(token)) return false;
-  if (/^\d+$/.test(token)) return false;
-  return true;
-}
-
-function findNextIndex(tokens: string[], target: string, start: number): number {
-  for (let i = start; i < tokens.length; i++) {
-    if (tokens[i] === target) return i;
-  }
-  return -1;
-}
-
-export function histogramChunk(left: string[], right: string[]): Chunk[] {
-  const leftFreq = frequencyMap(left);
-  const rightFreq = frequencyMap(right);
-
-  const anchors: string[] = [];
-  const seen = new Set<string>();
-
-  for (const token of left) {
-    if (seen.has(token)) continue;
-    seen.add(token);
-
-    const lf = leftFreq.get(token) ?? 0;
-    const rf = rightFreq.get(token) ?? 0;
-
-    if (isGoodAnchor(token) && lf === 1 && rf === 1) {
-      anchors.push(token);
-    }
-  }
-
-  if (anchors.length === 0) {
-    return [{ left, right }];
-  }
-
-  const chunks: Chunk[] = [];
-  let leftStart = 0;
-  let rightStart = 0;
-  let lastLeft = 0;
-  let lastRight = 0;
-
-  for (const anchor of anchors) {
-    const leftIndex = findNextIndex(left, anchor, lastLeft);
-    const rightIndex = findNextIndex(right, anchor, lastRight);
-
-    if (leftIndex === -1 || rightIndex === -1) continue;
-
-    const beforeLeft = left.slice(leftStart, leftIndex);
-    const beforeRight = right.slice(rightStart, rightIndex);
-
-    if (beforeLeft.length || beforeRight.length) {
-      chunks.push({
-        left: beforeLeft,
-        right: beforeRight,
-      });
-    }
-
-    chunks.push({
-      left: [anchor],
-      right: [anchor],
-    });
-
-    leftStart = leftIndex + 1;
-    rightStart = rightIndex + 1;
-    lastLeft = leftStart;
-    lastRight = rightStart;
-  }
-
-  const tailLeft = left.slice(leftStart);
-  const tailRight = right.slice(rightStart);
-
-  if (tailLeft.length || tailRight.length) {
-    chunks.push({
-      left: tailLeft,
-      right: tailRight,
-    });
-  }
-
-  return chunks;
-}
-
-export function myersDiff(a: string[], b: string[]): DiffPart[] {
+export function myersDiff(leftTokens: DiffToken[], rightTokens: DiffToken[]): DiffPart[] {
+  const a = leftTokens.map((token) => token.key);
+  const b = rightTokens.map((token) => token.key);
   const n = a.length;
   const m = b.length;
   const max = n + m;
   const offset = max;
   const trace: number[][] = [];
-  const v = new Array(2 * max + 1).fill(0);
+  const v = new Array<number>(2 * max + 1).fill(0);
 
   for (let d = 0; d <= max; d++) {
     trace.push(v.slice());
 
     for (let k = -d; k <= d; k += 2) {
       const index = offset + k;
-
       let x: number;
+
       if (k === -d || (k !== d && v[index - 1] < v[index + 1])) {
         x = v[index + 1];
       } else {
@@ -362,7 +113,7 @@ export function myersDiff(a: string[], b: string[]): DiffPart[] {
       v[index] = x;
 
       if (x >= n && y >= m) {
-        return backtrack(a, b, trace, d, offset);
+        return backtrackDiff(leftTokens, rightTokens, trace, d, offset);
       }
     }
   }
@@ -370,23 +121,23 @@ export function myersDiff(a: string[], b: string[]): DiffPart[] {
   return [];
 }
 
-function backtrack(
-  a: string[],
-  b: string[],
+function backtrackDiff(
+  leftTokens: DiffToken[],
+  rightTokens: DiffToken[],
   trace: number[][],
-  d: number,
+  depth: number,
   offset: number
 ): DiffPart[] {
   const parts: DiffPart[] = [];
-  let x = a.length;
-  let y = b.length;
+  let x = leftTokens.length;
+  let y = rightTokens.length;
 
-  for (let depth = d; depth > 0; depth--) {
-    const v = trace[depth];
+  for (let d = depth; d > 0; d--) {
+    const v = trace[d];
     const k = x - y;
 
     let prevK: number;
-    if (k === -depth || (k !== depth && v[offset + k - 1] < v[offset + k + 1])) {
+    if (k === -d || (k !== d && v[offset + k - 1] < v[offset + k + 1])) {
       prevK = k + 1;
     } else {
       prevK = k - 1;
@@ -396,89 +147,144 @@ function backtrack(
     const prevY = prevX - prevK;
 
     while (x > prevX && y > prevY) {
-      parts.push({ value: [a[x - 1]] });
+      parts.push({
+        kind: "unchanged",
+        left: [leftTokens[x - 1]],
+        right: [rightTokens[y - 1]],
+      });
       x--;
       y--;
     }
 
-    if (depth > 0) {
-      if (x === prevX) {
-        parts.push({ value: [b[y - 1]], added: true });
-        y--;
-      } else {
-        parts.push({ value: [a[x - 1]], removed: true });
-        x--;
-      }
+    if (x === prevX) {
+      parts.push({
+        kind: "added",
+        left: [],
+        right: [rightTokens[y - 1]],
+      });
+      y--;
+    } else {
+      parts.push({
+        kind: "removed",
+        left: [leftTokens[x - 1]],
+        right: [],
+      });
+      x--;
     }
   }
 
   while (x > 0 && y > 0) {
-    if (a[x - 1] === b[y - 1]) {
-      parts.push({ value: [a[x - 1]] });
-      x--;
-      y--;
-    } else {
+    if (leftTokens[x - 1].key !== rightTokens[y - 1].key) {
       break;
     }
+
+    parts.push({
+      kind: "unchanged",
+      left: [leftTokens[x - 1]],
+      right: [rightTokens[y - 1]],
+    });
+    x--;
+    y--;
   }
 
   while (x > 0) {
-    parts.push({ value: [a[x - 1]], removed: true });
+    parts.push({
+      kind: "removed",
+      left: [leftTokens[x - 1]],
+      right: [],
+    });
     x--;
   }
 
   while (y > 0) {
-    parts.push({ value: [b[y - 1]], added: true });
+    parts.push({
+      kind: "added",
+      left: [],
+      right: [rightTokens[y - 1]],
+    });
     y--;
   }
 
   parts.reverse();
-  return mergeAdjacent(parts);
+  return mergeDiffParts(parts);
 }
 
-function mergeAdjacent(parts: DiffPart[]): DiffPart[] {
+function mergeDiffParts(parts: DiffPart[]): DiffPart[] {
   const merged: DiffPart[] = [];
 
   for (const part of parts) {
-    const prev = merged[merged.length - 1];
+    const previous = merged[merged.length - 1];
 
-    if (
-      prev &&
-      prev.added === part.added &&
-      prev.removed === part.removed
-    ) {
-      prev.value.push(...part.value);
+    if (previous && previous.kind === part.kind) {
+      previous.left.push(...part.left);
+      previous.right.push(...part.right);
     } else {
       merged.push({
-        value: [...part.value],
-        added: part.added,
-        removed: part.removed,
+        kind: part.kind,
+        left: [...part.left],
+        right: [...part.right],
       });
     }
   }
 
   return merged;
+}
+
+function pairReplacements(parts: DiffPart[]): PairedDisplayPart[] {
+  const paired: PairedDisplayPart[] = [];
+
+  for (let i = 0; i < parts.length; i++) {
+    const current = parts[i];
+    const next = parts[i + 1];
+
+    if (
+      current.kind === "removed" &&
+      next?.kind === "added" &&
+      current.left.length > 0 &&
+      next.right.length > 0
+    ) {
+      paired.push({
+        type: "replace",
+        part: current,
+        next,
+      });
+      i++;
+      continue;
+    }
+
+    if (current.kind === "unchanged") {
+      paired.push({ type: "unchanged", part: current });
+    } else if (current.kind === "removed") {
+      paired.push({ type: "removed", part: current });
+    } else {
+      paired.push({ type: "added", part: current });
+    }
+  }
+
+  return paired;
 }
 
 function mergeDisplayParts(parts: DisplayPart[]): DisplayPart[] {
   const merged: DisplayPart[] = [];
 
   for (const part of parts) {
-    const prev = merged[merged.length - 1];
+    const previous = merged[merged.length - 1];
 
     if (
-      prev &&
-      prev.kind === part.kind &&
-      prev.replaced === part.replaced &&
-      prev.groupId === part.groupId
+      previous &&
+      previous.kind === part.kind &&
+      previous.replaced === part.replaced &&
+      previous.groupId === part.groupId &&
+      previous.otherTokens === part.otherTokens
     ) {
-      prev.value.push(...part.value);
+      previous.tokens.push(...part.tokens);
     } else {
       merged.push({
-        value: [...part.value],
+        tokens: [...part.tokens],
         kind: part.kind,
         replaced: part.replaced,
         groupId: part.groupId,
+        otherTokens: part.otherTokens ? [...part.otherTokens] : undefined,
       });
     }
   }
@@ -486,62 +292,66 @@ function mergeDisplayParts(parts: DisplayPart[]): DisplayPart[] {
   return merged;
 }
 
-export function diffTokens(left: string[], right: string[]): DiffPart[] {
-  const chunks = histogramChunk(left, right);
-  const allParts: DiffPart[] = [];
+export function toDisplayParts(parts: DiffPart[], side: "left" | "right"): DisplayPart[] {
+  const grouped = pairReplacements(parts);
+  const display: DisplayPart[] = [];
+  let replacementIndex = 0;
 
-  for (const chunk of chunks) {
-    const parts = myersDiff(chunk.left, chunk.right);
-    allParts.push(...parts);
+  for (const item of grouped) {
+    if (item.type === "unchanged") {
+      display.push({
+        tokens: side === "left" ? item.part.left : item.part.right,
+        kind: "unchanged",
+      });
+      continue;
+    }
+
+    if (item.type === "removed") {
+      if (side === "left") {
+        display.push({
+          tokens: item.part.left,
+          kind: "removed",
+        });
+      }
+      continue;
+    }
+
+    if (item.type === "added") {
+      if (side === "right") {
+        display.push({
+          tokens: item.part.right,
+          kind: "added",
+        });
+      }
+      continue;
+    }
+
+    const groupId = `replace-${replacementIndex++}`;
+
+    if (side === "left") {
+      display.push({
+        tokens: item.part.left,
+        kind: "removed",
+        replaced: true,
+        groupId,
+        otherTokens: item.next.right,
+      });
+    } else {
+      display.push({
+        tokens: item.next.right,
+        kind: "added",
+        replaced: true,
+        groupId,
+        otherTokens: item.part.left,
+      });
+    }
   }
 
-  return mergeAdjacent(allParts);
+  return mergeDisplayParts(display);
 }
 
-export function diffMarkdown(leftMarkdown: string, rightMarkdown: string): BlockDiff[] {
-  const leftBlocks = parseMarkdownBlocks(leftMarkdown);
-  const rightBlocks = parseMarkdownBlocks(rightMarkdown);
-
-  const maxBlocks = Math.max(leftBlocks.length, rightBlocks.length);
-  const result: BlockDiff[] = [];
-
-  for (let i = 0; i < maxBlocks; i++) {
-    const leftBlock = leftBlocks[i];
-    const rightBlock = rightBlocks[i];
-
-    if (!leftBlock && rightBlock) {
-      result.push({
-        rightBlock,
-        parts: [{ value: tokenize(rightBlock.content), added: true }],
-      });
-      continue;
-    }
-
-    if (leftBlock && !rightBlock) {
-      result.push({
-        leftBlock,
-        parts: [{ value: tokenize(leftBlock.content), removed: true }],
-      });
-      continue;
-    }
-
-    if (!leftBlock || !rightBlock) continue;
-
-    if (leftBlock.type !== rightBlock.type) {
-      result.push({
-        leftBlock,
-        rightBlock,
-        parts: diffTokens(tokenize(leftBlock.content), tokenize(rightBlock.content)),
-      });
-      continue;
-    }
-
-    result.push({
-      leftBlock,
-      rightBlock,
-      parts: diffTokens(tokenize(leftBlock.content), tokenize(rightBlock.content)),
-    });
-  }
-
-  return result;
+export function diffText(leftText: string, rightText: string): DiffPart[] {
+  const leftTokens = tokenize(normalizeMarkdown(leftText));
+  const rightTokens = tokenize(normalizeMarkdown(rightText));
+  return myersDiff(leftTokens, rightTokens);
 }

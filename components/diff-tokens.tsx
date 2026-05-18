@@ -1,23 +1,14 @@
 import { DisplayPart } from "@/lib/markdown-diff";
+import {
+  PreviewCard,
+  PreviewCardPopup,
+  PreviewCardTrigger,
+  PreviewCardArrow,
+} from "./ui/preview-card";
 
-function joinTokens(tokens: string[]) {
-  let out = "";
-
-  for (let i = 0; i < tokens.length; i++) {
-    const curr = tokens[i];
-    const prev = tokens[i - 1];
-
-    const noLeadingSpace = /^[,.;:!?)]$/.test(curr);
-    const noTrailingSpaceFromPrev = prev && /^[(]$/.test(prev);
-
-    if (i > 0 && !noLeadingSpace && !noTrailingSpaceFromPrev) {
-      out += " ";
-    }
-
-    out += curr;
-  }
-
-  return out;
+function renderTokenText(tokens: DisplayPart["tokens"] | undefined) {
+  if (!tokens) return "";
+  return tokens.map((token) => `${token.leading}${token.text}`).join("");
 }
 
 export function DiffTokens({
@@ -32,24 +23,32 @@ export function DiffTokens({
   return (
     <>
       {parts.map((part, index) => {
-        const text = joinTokens(part.value);
+        const text = renderTokenText(part.tokens);
         const isActive = Boolean(part.groupId && part.groupId === activeGroupId);
 
         if (part.replaced) {
           return (
-            <span
-              key={index}
-              onMouseEnter={() => setActiveGroupId(part.groupId ?? null)}
-              onMouseLeave={() => setActiveGroupId(null)}
-              className={[
-                "rounded px-1 transition-all duration-150 cursor-default",
-                "bg-amber-200 text-amber-950",
-                isActive ? "ring-2 ring-amber-400 shadow-sm" : "",
-              ].join(" ")}
-              data-replacement-group={part.groupId}
-            >
-              {text}
-            </span>
+            <PreviewCard key={index}>
+              <PreviewCardTrigger
+                delay={200}
+                closeDelay={150}
+                onMouseEnter={() => setActiveGroupId(part.groupId ?? null)}
+                onMouseLeave={() => setActiveGroupId(null)}
+                className={[
+                  "rounded px-1 transition-all duration-150 cursor-default outline-none inline-span",
+                  "bg-blue-200/85 text-blue-950",
+                  isActive ? "ring-2 ring-black shadow-sm" : "",
+                ].join(" ")}
+              >
+                {text}
+              </PreviewCardTrigger>
+              <PreviewCardPopup className="max-w-96 w-fit flex gap-2 p-2 bg-white/95 backdrop-blur-md border border-[#EAEAEA] shadow-xl rounded-xl z-50">
+                <div className="text-[12px] font-medium text-gray-800 leading-relaxed whitespace-pre-wrap">
+                  {renderTokenText(part.otherTokens)}
+                </div>
+                <PreviewCardArrow className="fill-white [&>path]:stroke-[#EAEAEA] stroke-[0.5]" />
+              </PreviewCardPopup>
+            </PreviewCard>
           );
         }
 
@@ -57,7 +56,7 @@ export function DiffTokens({
           return (
             <span
               key={index}
-              className="rounded bg-rose-200 px-1 text-rose-950 line-through"
+              className="rounded bg-rose-200/80 px-1 text-rose-950"
             >
               {text}
             </span>
@@ -68,7 +67,7 @@ export function DiffTokens({
           return (
             <mark
               key={index}
-              className="rounded bg-emerald-200 px-1 text-emerald-950"
+              className="rounded bg-emerald-200/80 px-1 text-emerald-950"
             >
               {text}
             </mark>

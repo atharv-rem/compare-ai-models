@@ -97,6 +97,7 @@ export function PromptInput({
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               if (value.trim()) {
+                gitCompareRef.current?.startAnimation();
                 handleCompareClick();
               }
             }
@@ -139,18 +140,16 @@ export function PromptInput({
 
           <div className="flex flex-row items-center gap-2">
             {/* Compare button */}
-            {!isCompareMode && (
-              <button 
-                onClick={handleCompareClick}
-                onMouseEnter={() => gitCompareRef.current?.startAnimation()}
-                onMouseLeave={() => gitCompareRef.current?.stopAnimation()}
-                className="flex flex-row items-center px-2 py-1 border-[1.5px] border-[#F5F5F5] rounded-[10px] gap-2 justify-center hover:bg-[#F5F5F5] focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!value.trim()}
-              >
-                <GitCompareIcon ref={gitCompareRef as any} size={16} />
-                <p className="text-center text-[12px]">Compare</p>
-              </button>
-            )}
+            <button 
+              onClick={handleCompareClick}
+              onMouseEnter={() => gitCompareRef.current?.startAnimation()}
+              onMouseLeave={() => gitCompareRef.current?.stopAnimation()}
+              className="flex flex-row items-center px-2 py-1 border-[1.5px] border-[#F5F5F5] rounded-[10px] gap-2 justify-center hover:bg-[#F5F5F5] focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!value.trim()}
+            >
+              <GitCompareIcon ref={gitCompareRef as any} size={16} />
+              <p className="text-center text-[12px]">Compare</p>
+            </button>
 
             <button
               onClick={isListening ? stopListening : startListening}
