@@ -5,6 +5,13 @@ import {
   PreviewCardTrigger,
   PreviewCardArrow,
 } from "./ui/preview-card";
+import {
+  Popover,
+  PopoverPopup,
+  PopoverTrigger,
+  PopoverArrow,
+} from "./ui/popover";
+import { useState, useEffect } from "react";
 
 function renderTokenText(tokens: DisplayPart["tokens"] | undefined) {
   if (!tokens) return "";
@@ -20,6 +27,15 @@ export function DiffTokens({
   activeGroupId: string | null;
   setActiveGroupId: (groupId: string | null) => void;
 }) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.matchMedia("(max-width: 768px)").matches);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   return (
     <>
       {parts.map((part, index) => {
@@ -27,11 +43,15 @@ export function DiffTokens({
         const isActive = Boolean(part.groupId && part.groupId === activeGroupId);
 
         if (part.replaced) {
+          const TriggerContainer = isMobile ? Popover : PreviewCard;
+          const Trigger = isMobile ? PopoverTrigger : PreviewCardTrigger;
+          const Popup = isMobile ? PopoverPopup : PreviewCardPopup;
+          const Arrow = isMobile ? PopoverArrow : PreviewCardArrow;
+
           return (
-            <PreviewCard key={index}>
-              <PreviewCardTrigger
-                delay={200}
-                closeDelay={150}
+            <TriggerContainer key={index}>
+              <Trigger
+                {...(!isMobile ? { delay: 200, closeDelay: 150 } : {})}
                 onMouseEnter={() => setActiveGroupId(part.groupId ?? null)}
                 onMouseLeave={() => setActiveGroupId(null)}
                 className={[
@@ -41,14 +61,14 @@ export function DiffTokens({
                 ].join(" ")}
               >
                 {text}
-              </PreviewCardTrigger>
-              <PreviewCardPopup className="max-w-96 w-fit flex gap-2 p-2 bg-white/95 backdrop-blur-md border border-[#EAEAEA] shadow-xl rounded-xl z-50">
+              </Trigger>
+              <Popup className="max-w-96 w-fit flex gap-2 p-2 bg-white/95 backdrop-blur-md border border-[#EAEAEA] shadow-xl rounded-xl z-50">
                 <div className="text-[12px] font-medium text-gray-800 leading-relaxed whitespace-pre-wrap">
                   {renderTokenText(part.otherTokens)}
                 </div>
-                <PreviewCardArrow className="fill-white [&>path]:stroke-[#EAEAEA] stroke-[0.5]" />
-              </PreviewCardPopup>
-            </PreviewCard>
+                <Arrow className="fill-white [&>path]:stroke-[#EAEAEA] stroke-[0.5]" />
+              </Popup>
+            </TriggerContainer>
           );
         }
 

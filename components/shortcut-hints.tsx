@@ -6,7 +6,7 @@ export function ShortcutHints() {
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="mt-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[12px] text-[#595959] px-4"
+      className="mt-6 hidden md:flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[12px] text-[#595959] px-4"
     >
       <div className="flex items-center gap-2">
         <span>Prompt</span>
