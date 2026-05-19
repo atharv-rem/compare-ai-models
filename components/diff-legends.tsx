@@ -69,7 +69,9 @@ export default function DiffLegend() {
             return (
               <Drawer key={idx} position="bottom">
                 <DrawerTrigger 
-                  className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-black ${item.triggerClass}`}
+                  aria-label={`${item.label}: ${item.description}`}
+                  className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1 ${item.triggerClass}`}
+                  render={<button type="button" title={`${item.label}: ${item.description}`} />}
                 >
                   <span className={`h-2 w-2 rounded-full ${item.dotClass}`} />
                   <span>{item.label}</span>
@@ -91,7 +93,9 @@ export default function DiffLegend() {
             <PreviewCard key={idx}>
               <PreviewCardTrigger 
                 delay={200} closeDelay={150}
-                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-black ${item.triggerClass}`}
+                aria-label={`${item.label}: ${item.description}`}
+                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1 ${item.triggerClass}`}
+                render={<button type="button" title={`${item.label}: ${item.description}`} />}
               >
                 <span className={`h-2 w-2 rounded-full ${item.dotClass}`} />
                 <span>{item.label}</span>

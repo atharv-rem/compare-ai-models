@@ -24,11 +24,12 @@ export function ChatTabs({ chats, activeChat, setActiveChat, setValue, onDeleteC
       animate={{ opacity: 1, y: 0 }}
       className="flex items-center gap-2 mb-4 w-full overflow-x-auto scrollbar-hide py-1"
     >
-      <div className="flex gap-2 flex-grow overflow-x-auto scrollbar-hide">
+      <div className="flex grow gap-2 overflow-x-auto scrollbar-hide">
         {chats.map((chat, index) => (
-          <div key={chat.id} className="relative group flex-shrink-0">
+          <div key={chat.id} className="relative group shrink-0">
             <button 
               onClick={() => {setActiveChat(chat.id); setValue(chat.prompt);}}
+              aria-label={`Open chat ${index + 1}${activeChat === chat.id ? ", active" : ""}`}
               className={`flex items-center gap-2 px-4 py-2 rounded-[10px] text-[12px] focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none transition-all ${activeChat === chat.id ? 'bg-black text-white' : 'bg-white border-[1.5px] border-[#F5F5F5] hover:bg-[#F5F5F5]'}`}
             >
               <MessageCircleIcon size={14} />
@@ -39,6 +40,7 @@ export function ChatTabs({ chats, activeChat, setActiveChat, setValue, onDeleteC
                 e.stopPropagation();
                 onDeleteChat(chat.id);
               }}
+              aria-label={`Delete chat ${index + 1}`}
               className="absolute -top-1 -right-1 bg-white border border-gray-200 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-50 hover:text-rose-600 shadow-sm z-10"
               title="Delete chat"
             >
@@ -50,7 +52,8 @@ export function ChatTabs({ chats, activeChat, setActiveChat, setValue, onDeleteC
       
       <button
         onClick={onClearAll}
-        className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-[10px] text-[11px] font-medium text-rose-600 hover:bg-rose-50 transition-colors border border-transparent hover:border-rose-100"
+        aria-label="Clear all chats"
+        className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-[10px] text-[11px] font-medium text-rose-600 hover:bg-rose-50 transition-colors border border-transparent hover:border-rose-100"
         title="Clear all chats"
       >
         <Trash2 size={13} />

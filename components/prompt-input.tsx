@@ -51,10 +51,16 @@ export function PromptInput({
   // Auto-resize textarea based on content
   useEffect(() => {
     const textarea = textareaRef.current;
-    if (textarea && isFocused) {
-      textarea.style.height = "auto";
-      const newHeight = Math.max(70, Math.min(textarea.scrollHeight, 200));
-      textarea.style.height = `${newHeight}px`;
+    if (textarea) {
+      textarea.style.maxHeight = "200px";
+
+      if (isFocused) {
+        textarea.style.height = "auto";
+        const newHeight = Math.max(70, Math.min(textarea.scrollHeight, 200));
+        textarea.style.height = `${newHeight}px`;
+      } else {
+        textarea.style.height = "40px";
+      }
     }
   }, [value, isFocused, textareaRef]);
 
@@ -63,7 +69,7 @@ export function PromptInput({
 
       {/* Placeholder text */}
       {!isFocused && value === "" && !isListening && !isCompareMode && (
-        <div className="absolute top-[15px] left-[22px] pointer-events-none z-10">
+        <div className="absolute top-3.75 left-5.5 pointer-events-none z-10">
           <AnimatePresence mode="wait">
             <motion.p
               key={currentPrompt}
@@ -81,7 +87,7 @@ export function PromptInput({
       
       {/* Listening indicator */}
       {isListening && value === "" && (
-        <div className="absolute top-[18px] left-[22px] pointer-events-none z-10 flex items-center gap-2">
+        <div className="absolute top-4.5 left-5.5 pointer-events-none z-10 flex items-center gap-2">
           <AudioLinesIcon size={20} active={true} />
           <p className="text-[14px] text-[#595959]">Listening...</p>
         </div>
@@ -106,15 +112,11 @@ export function PromptInput({
               }
             }
           }}
-          className="w-full resize-none bg-transparent text-[15px] focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:outline-none transition-all overflow-y-auto min-h-[40px] border-none"
-          style={{
-            height: isFocused || value !== "" ? "auto" : "40px",
-            maxHeight: "200px",
-          }}
+          className="w-full resize-none bg-transparent text-[15px] focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:outline-none transition-all overflow-y-auto min-h-10 border-none"
           rows={1}
         />
         
-        <div className="flex flex-row items-center justify-between mt-[15px] w-full gap-2 flex-wrap sm:flex-nowrap">
+        <div className="flex flex-row items-center justify-between mt-3.75 w-full gap-2 flex-wrap sm:flex-nowrap">
           
           <div className="flex flex-row items-center gap-2 flex-wrap">
             {/* Model labels and Compare button */}
@@ -134,6 +136,7 @@ export function PromptInput({
             {isCompareMode && (
               <button
                 onClick={handleNewChat}
+                aria-label="Create a new chat"
                 className="flex items-center gap-2 px-3 py-1.5 border-[1.5px] border-[#F5F5F5] rounded-[10px] hover:bg-[#F5F5F5] focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none transition-colors text-[12px]"
               >
                 <Plus size={16} />  
@@ -147,6 +150,7 @@ export function PromptInput({
             {!isCompareMode && hasPreviousChats && (
                <button
                   onClick={onSeePreviousChats}
+                  aria-label="See previous chats"
                   className="flex flex-row items-center px-2 py-1 border-[1.5px] border-[#F5F5F5] rounded-[10px] gap-2 justify-center hover:bg-[#F5F5F5] focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none transition-colors text-[12px]"
                 >
                   <History size={16} />
@@ -157,6 +161,7 @@ export function PromptInput({
             {/* Compare button */}
             <button 
               onClick={handleCompareClick}
+              aria-label="Compare model outputs"
               onMouseEnter={() => gitCompareRef.current?.startAnimation()}
               onMouseLeave={() => gitCompareRef.current?.stopAnimation()}
               className="flex flex-row items-center px-2 py-1 border-[1.5px] border-[#F5F5F5] rounded-[10px] gap-2 justify-center hover:bg-[#F5F5F5] focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

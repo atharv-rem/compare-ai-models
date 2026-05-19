@@ -56,7 +56,10 @@ function MetricsPreview({
   if (isMobile) {
     return (
       <Drawer position="bottom">
-        <DrawerTrigger className={triggerClassName}>
+        <DrawerTrigger
+          aria-label={`${title}: ${value} ${label}`}
+          className={triggerClassName}
+        >
           {value} {label}
         </DrawerTrigger>
         <DrawerPopup variant="straight" className="flex flex-col gap-2 p-6 z-50">
@@ -71,7 +74,11 @@ function MetricsPreview({
 
   return (
     <PreviewCard>
-      <PreviewCardTrigger className={cn("cursor-pointer", triggerClassName)}>
+      <PreviewCardTrigger
+        aria-label={`${title}: ${value} ${label}`}
+        className={cn("cursor-pointer focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1", triggerClassName)}
+        render={<button type="button" title={`${title}: ${value} ${label}`} />}
+      >
         {value} {label}
       </PreviewCardTrigger>
       <PreviewCardPopup className="w-64 flex flex-col gap-2 p-3 bg-white/95 backdrop-blur-md border border-[#EAEAEA] shadow-xl rounded-xl">

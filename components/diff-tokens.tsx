@@ -46,7 +46,11 @@ export function DiffTokens({
               <DrawerTrigger
                 onMouseEnter={() => setActiveGroupId(part.groupId ?? null)}
                 onMouseLeave={() => setActiveGroupId(null)}
-                className="rounded px-0 transition-all duration-150 cursor-pointer outline-none inline-span"
+                onFocus={() => setActiveGroupId(part.groupId ?? null)}
+                onBlur={() => setActiveGroupId(null)}
+                aria-label={`Open token comparison for ${text}`}
+                className="inline-flex rounded px-0 transition-all duration-150 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1"
+                render={<button type="button" title={`Open token comparison for ${text}`} />}
               >
                 {renderTokenFragments(
                   part.tokens,
