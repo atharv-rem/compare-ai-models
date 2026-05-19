@@ -27,8 +27,11 @@ type PairedDisplayPart =
 export function normalizeMarkdown(input: string): string {
   return input
     .replace(/\r\n/g, "\n")
-    .replace(/[ \t]+$/gm, "")
     .replace(/\u00A0/g, " ")
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter((line) => line.length > 0)
+    .join("\n")
     .trim();
 }
 

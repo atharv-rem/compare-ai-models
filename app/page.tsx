@@ -384,6 +384,17 @@ export default function Home() {
           onSeePreviousChats={() => {
             const lastChatWithOutput = [...chats].reverse().find(c => c.outputs.model1 || c.outputs.model2);
             if (lastChatWithOutput) {
+              const activeChatState = chats.find(chat => chat.id === activeChat);
+              const isEmptyDraft =
+                activeChatState &&
+                !activeChatState.prompt.trim() &&
+                !activeChatState.outputs.model1 &&
+                !activeChatState.outputs.model2;
+
+              if (isEmptyDraft && chats.length > 1) {
+                setChats(prev => prev.filter(chat => chat.id !== activeChat));
+              }
+
               setActiveChat(lastChatWithOutput.id);
               setValue(lastChatWithOutput.prompt);
             }

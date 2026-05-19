@@ -56,7 +56,7 @@ export default function DiffLegend() {
       triggerClass: "border-blue-200 bg-blue-50 text-blue-900",
       icon: <Replace className="w-4 h-4 text-blue-500" />,
       title: "Replacement",
-      description: "Sections where text was substituted. Hover over these highlighted tokens to instantly see how they match up across both outputs.",
+      description: "Sections where text was substituted. Click these highlighted tokens to instantly see how they match up across both outputs.",
       textColor: "text-blue-800"
     }
   ];

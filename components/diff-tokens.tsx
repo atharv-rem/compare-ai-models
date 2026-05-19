@@ -10,6 +10,21 @@ function renderTokenText(tokens: DisplayPart["tokens"] | undefined) {
   return tokens.map((token) => `${token.leading}${token.text}`).join("");
 }
 
+function renderTokenFragments(
+  tokens: DisplayPart["tokens"] | undefined,
+  highlightClass: string,
+  activeClassName = "",
+) {
+  if (!tokens || tokens.length === 0) return null;
+
+  return tokens.map((token, index) => (
+    <span key={`${token.text}-${index}`}>
+      {token.leading}
+      <span className={[highlightClass, activeClassName].join(" ").trim()}>{token.text}</span>
+    </span>
+  ));
+}
+
 export function DiffTokens({
   parts,
   activeGroupId,
@@ -31,13 +46,13 @@ export function DiffTokens({
               <DrawerTrigger
                 onMouseEnter={() => setActiveGroupId(part.groupId ?? null)}
                 onMouseLeave={() => setActiveGroupId(null)}
-                className={[
-                  "rounded px-1 transition-all duration-150 cursor-pointer outline-none inline-span",
-                  "bg-blue-200/85 text-blue-950",
-                  isActive ? "ring-2 ring-black shadow-sm" : "",
-                ].join(" ")}
+                className="rounded px-0 transition-all duration-150 cursor-pointer outline-none inline-span"
               >
-                {text}
+                {renderTokenFragments(
+                  part.tokens,
+                  "bg-blue-200/85 text-blue-950",
+                  isActive ? "rounded ring-2 ring-black shadow-sm" : "",
+                )}
               </DrawerTrigger>
               <DrawerPopup variant="straight" className="flex flex-col gap-2 p-6 z-50">
                 <div className="flex justify-between items-center mb-2">
@@ -74,21 +89,21 @@ export function DiffTokens({
           return (
             <span
               key={index}
-              className="rounded bg-rose-200/80 px-1 text-rose-950"
+              className="rounded px-1"
             >
-              {text}
+              {renderTokenFragments(part.tokens, "bg-rose-200/80 text-rose-950")}
             </span>
           );
         }
 
         if (part.kind === "added") {
           return (
-            <mark
+            <span
               key={index}
-              className="rounded bg-emerald-200/80 px-1 text-emerald-950"
+              className="rounded px-1"
             >
-              {text}
-            </mark>
+              {renderTokenFragments(part.tokens, "bg-emerald-200/80 text-emerald-950")}
+            </span>
           );
         }
 
