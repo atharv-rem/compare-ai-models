@@ -13,9 +13,9 @@ A feature-rich Next.js application designed to provide side-by-side comparisons 
 
 ## Tech Stack
 
-- [Next.js App Router](https://nextjs.org/) - React Framework
-- [Tailwind CSS](https://tailwindcss.com/) - Utility-first styling
-- [Framer Motion](https://www.framer.com/motion/) - Fluid UI animations
+- [Next.js](https://nextjs.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Motion](https://motion.dev/)
 - **Web Speech API** for voice dictation.
 
 ## Getting Started
