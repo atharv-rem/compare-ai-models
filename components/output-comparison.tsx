@@ -36,6 +36,7 @@ type OutputComparisonProps = {
   tokensPerSecond: { model1: number; model2: number };
   executionTimes: { model1: number; model2: number };
   timeToFirstByte: { model1: number; model2: number };
+  modelErrors: { model1: string | null; model2: string | null };
 };
 
 function MetricsPreview({ 
@@ -108,9 +109,12 @@ export function OutputComparison({
   tokensPerSecond,
   executionTimes,
   timeToFirstByte,
+  modelErrors,
 }: OutputComparisonProps) {
   const leftOutput = currentChat?.outputs.model1 ?? "";
   const rightOutput = currentChat?.outputs.model2 ?? "";
+  const leftError = modelErrors.model1;
+  const rightError = modelErrors.model2;
   const parts = diffText(leftOutput, rightOutput);
   const showLegend = Boolean(leftOutput || rightOutput);
   const [activeReplacementGroup, setActiveReplacementGroup] = useState<string | null>(null);
@@ -155,13 +159,13 @@ export function OutputComparison({
                   <p className="text-[14px] font-medium">Sarvam 30B</p>
                 </div>
 
-                {leftOutput && (
+                {(leftOutput || leftError) && (
                   <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:mt-0">
                     <MetricsPreview
                       label="tokens"
                       value={tokenCounts.model1}
                       title="Token count"
-                      description="The number of tokens generated in this model response."
+                      description="The API-reported completion token usage for this model response."
                       triggerClassName="rounded-full border border-[#E5E5E5] bg-[#F5F5F5] px-2 py-0.5 text-[11px] font-medium text-[#595959] outline-none"
                       isMobile={isMobile}
                     />
@@ -203,8 +207,18 @@ export function OutputComparison({
                     activeGroupId={activeReplacementGroup}
                     setActiveGroupId={setActiveReplacementGroup}
                   />
+                ) : leftError ? (
+                  <div className="rounded-[12px] border border-rose-200 bg-rose-50 px-3 py-2 text-[13px] text-rose-900">
+                    {leftError}
+                  </div>
                 ) : (
                   <WaitingState text="Waiting for response..." />
+                )}
+
+                {leftOutput && leftError && (
+                  <div className="mt-3 rounded-[12px] border border-rose-200 bg-rose-50 px-3 py-2 text-[13px] text-rose-900">
+                    {leftError}
+                  </div>
                 )}
               </div>
             </motion.div>
@@ -227,13 +241,13 @@ export function OutputComparison({
                   <p className="text-[14px] font-medium">Sarvam 105B</p>
                 </div>
 
-                {rightOutput && (
+                {(rightOutput || rightError) && (
                   <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:mt-0">
                     <MetricsPreview
                       label="tokens"
                       value={tokenCounts.model2}
                       title="Token count"
-                      description="The number of tokens generated in this model response."
+                      description="The API-reported completion token usage for this model response."
                       triggerClassName="rounded-full border border-[#E5E5E5] bg-[#F5F5F5] px-2 py-0.5 text-[11px] font-medium text-[#595959] outline-none"
                       isMobile={isMobile}
                     />
@@ -275,8 +289,18 @@ export function OutputComparison({
                     activeGroupId={activeReplacementGroup}
                     setActiveGroupId={setActiveReplacementGroup}
                   />
+                ) : rightError ? (
+                  <div className="rounded-[12px] border border-rose-200 bg-rose-50 px-3 py-2 text-[13px] text-rose-900">
+                    {rightError}
+                  </div>
                 ) : (
                   <WaitingState text="Waiting for response..." />
+                )}
+
+                {rightOutput && rightError && (
+                  <div className="mt-3 rounded-[12px] border border-rose-200 bg-rose-50 px-3 py-2 text-[13px] text-rose-900">
+                    {rightError}
+                  </div>
                 )}
               </div>
             </motion.div>

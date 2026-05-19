@@ -1,31 +1,65 @@
 import { useEffect, useRef, useState } from "react"
 
+type SpeechRecognitionResultLike = {
+  isFinal: boolean
+  0: {
+    transcript: string
+  }
+}
+
+type SpeechRecognitionEventLike = {
+  resultIndex: number
+  results: ArrayLike<SpeechRecognitionResultLike>
+}
+
+type SpeechRecognitionErrorEventLike = {
+  error: string
+}
+
+type BrowserSpeechRecognition = {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null
+  onend: (() => void) | null
+  start: () => void
+  stop: () => void
+}
+
+type SpeechRecognitionConstructor = new () => BrowserSpeechRecognition
+
 declare global {
   interface Window {
-    SpeechRecognition: any
-    webkitSpeechRecognition: any
+    SpeechRecognition?: SpeechRecognitionConstructor
+    webkitSpeechRecognition?: SpeechRecognitionConstructor
   }
+}
+
+function getSpeechRecognitionConstructor() {
+  if (typeof window === "undefined") return null
+
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null
 }
 
 export function useSpeechRecognition() {
   const [transcript, setTranscript] = useState("")
   const [isListening, setIsListening] = useState(false)
-  const [error, setError] = useState("")
+  const [error, setError] = useState(() =>
+    getSpeechRecognitionConstructor()
+      ? ""
+      : "Speech recognition is not supported in this browser."
+  )
 
-  const recognitionRef = useRef<any>(null)
+  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null)
 
   // Persist final transcript across events
   const finalTranscriptRef = useRef("")
 
   useEffect(() => {
-    const SpeechRecognition =
-      window.SpeechRecognition ||
-      window.webkitSpeechRecognition
+    const SpeechRecognition = getSpeechRecognitionConstructor()
 
     if (!SpeechRecognition) {
-      setError(
-        "Speech recognition is not supported in this browser."
-      )
       return
     }
 
@@ -35,7 +69,7 @@ export function useSpeechRecognition() {
     recognition.interimResults = true
     recognition.lang = "en-US"
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEventLike) => {
       let interimTranscript = ""
 
       for (
@@ -59,7 +93,7 @@ export function useSpeechRecognition() {
       )
     }
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEventLike) => {
       setError(event.error)
       setIsListening(false)
     }
@@ -76,6 +110,11 @@ export function useSpeechRecognition() {
   }, [])
 
   const startListening = () => {
+    if (!recognitionRef.current) {
+      setError("Speech recognition is not supported in this browser.")
+      return
+    }
+
     setError("")
 
     finalTranscriptRef.current = ""

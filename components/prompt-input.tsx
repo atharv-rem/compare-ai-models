@@ -4,9 +4,10 @@ import sarvam30b from "../public/sarvam30b.png";
 import sarvam105b from "../public/sarvam105b.png";
 import mic from "../public/Vector.svg";
 import stop from "../public/stop.svg";
-import GitCompareIcon from "@/components/ui/compare-animated-icon";
+import GitCompareIcon, { type GitCompareIconHandle } from "@/components/ui/compare-animated-icon";
 import AudioLinesIcon from "@/components/ui/listening-waveform";
 import { Plus, History } from "lucide-react";
+import type { RefObject } from "react";
 
 import {useEffect } from "react";
 
@@ -21,12 +22,13 @@ type PromptInputProps = {
   onSeePreviousChats?: () => void;
   mockprompts: string[];
   currentPrompt: number;
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
-  gitCompareRef: React.RefObject<any>;
+  textareaRef: RefObject<HTMLTextAreaElement | null>;
+  gitCompareRef: RefObject<GitCompareIconHandle | null>;
   handleCompareClick: () => void;
   handleNewChat: () => void;
   startListening: () => void;
   stopListening: () => void;
+  isComparing: boolean;
 }
 
 export function PromptInput({
@@ -45,7 +47,8 @@ export function PromptInput({
   handleCompareClick,
   handleNewChat,
   startListening,
-  stopListening
+  stopListening,
+  isComparing
 }: PromptInputProps) {
   
   // Auto-resize textarea based on content
@@ -98,7 +101,7 @@ export function PromptInput({
         <label htmlFor="prompt" className="sr-only">Enter your prompt</label>
         <textarea
           id="prompt"
-          ref={textareaRef as any}
+          ref={textareaRef}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onFocus={() => setIsFocused(true)}
@@ -165,10 +168,10 @@ export function PromptInput({
               onMouseEnter={() => gitCompareRef.current?.startAnimation()}
               onMouseLeave={() => gitCompareRef.current?.stopAnimation()}
               className="flex flex-row items-center px-2 py-1 border-[1.5px] border-[#F5F5F5] rounded-[10px] gap-2 justify-center hover:bg-[#F5F5F5] focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={!value.trim()}
+              disabled={!value.trim() || isComparing}
             >
-              <GitCompareIcon ref={gitCompareRef as any} size={16} />
-              <p className="text-center text-[12px]">Compare</p>
+              <GitCompareIcon ref={gitCompareRef} size={16} />
+              <p className="text-center text-[12px]">{isComparing ? "Comparing..." : "Compare"}</p>
             </button>
 
             <button
