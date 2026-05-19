@@ -85,6 +85,7 @@ export default function Home() {
   });
   const [alerts, setAlerts] = useState<PageAlert[]>([]);
   const alertIdRef = useRef(0);
+  const alertTimeoutsRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
 
   useEffect(() => {
     const savedChats = localStorage.getItem("compare-chats-data");
@@ -115,32 +116,53 @@ export default function Home() {
         }
       } catch (e) {
         console.error("Failed to parse local storage", e);
-        setAlerts(prev => [
-          {
-            id: ++alertIdRef.current,
-            title: "Saved chats could not be restored",
-            description: "The stored conversation data was invalid, so the app started with a fresh state.",
-            variant: "warning",
-          },
-          ...prev,
-        ]);
+        pushAlert(
+          "Saved chats could not be restored",
+          "The stored conversation data was invalid, so the app started with a fresh state.",
+          "warning",
+        );
       }
     }
   }, []);
 
+  useEffect(() => {
+    return () => {
+      alertTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+      alertTimeoutsRef.current.clear();
+    };
+  }, []);
+
+  const removeAlert = useCallback((alertId: number) => {
+    const timeoutId = alertTimeoutsRef.current.get(alertId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      alertTimeoutsRef.current.delete(alertId);
+    }
+
+    setAlerts((prev) => prev.filter((alert) => alert.id !== alertId));
+  }, []);
+
   const pushAlert = useCallback(
     (title: string, description: string, variant: PageAlert["variant"] = "error") => {
-      setAlerts(prev => [
+      const id = ++alertIdRef.current;
+
+      setAlerts((prev) => [
         {
-          id: ++alertIdRef.current,
+          id,
           title,
           description,
           variant,
         },
         ...prev,
       ]);
+
+      const timeoutId = setTimeout(() => {
+        removeAlert(id);
+      }, 4000);
+
+      alertTimeoutsRef.current.set(id, timeoutId);
     },
-    [],
+    [removeAlert],
   );
 
   useEffect(() => {
