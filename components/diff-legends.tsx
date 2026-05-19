@@ -5,11 +5,10 @@ import {
   PreviewCardArrow,
 } from "./ui/preview-card";
 import {
-  Popover,
-  PopoverPopup,
-  PopoverTrigger,
-  PopoverArrow,
-} from "./ui/popover";
+  Drawer,
+  DrawerPopup,
+  DrawerTrigger,
+} from "./ui/drawer";
 import { CopyMinus, CopyPlus, Replace, AlignLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -66,21 +65,38 @@ export default function DiffLegend() {
     <div className="w-full mb-4 overflow-x-auto pb-2 scrollbar-hide">
       <div className="flex flex-nowrap items-center justify-start md:justify-center gap-2 rounded-[14px] px-3 py-2 text-[12px] text-[#4B5563] backdrop-blur-sm min-w-max">
         {items.map((item, idx) => {
-          const TriggerContainer = isMobile ? Popover : PreviewCard;
-          const Trigger = isMobile ? PopoverTrigger : PreviewCardTrigger;
-          const Popup = isMobile ? PopoverPopup : PreviewCardPopup;
-          const Arrow = isMobile ? PopoverArrow : PreviewCardArrow;
+          if (isMobile) {
+            return (
+              <Drawer key={idx} position="bottom">
+                <DrawerTrigger 
+                  className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-black ${item.triggerClass}`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${item.dotClass}`} />
+                  <span>{item.label}</span>
+                </DrawerTrigger>
+                <DrawerPopup variant="straight" className="flex flex-col gap-2 p-6 z-50">
+                  <div className={`flex items-center gap-2 font-semibold mb-2 text-base ${item.textColor}`}>
+                    {item.icon}
+                    {item.title}
+                  </div>
+                  <div className="text-sm text-gray-500 leading-relaxed">
+                    {item.description}
+                  </div>
+                </DrawerPopup>
+              </Drawer>
+            );
+          }
 
           return (
-            <TriggerContainer key={idx}>
-              <Trigger 
-                {...(!isMobile ? { delay: 200, closeDelay: 150 } : {})}
-                className={`inline-flex cursor-default items-center gap-1.5 rounded-full border px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-black ${item.triggerClass}`}
+            <PreviewCard key={idx}>
+              <PreviewCardTrigger 
+                delay={200} closeDelay={150}
+                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-black ${item.triggerClass}`}
               >
                 <span className={`h-2 w-2 rounded-full ${item.dotClass}`} />
                 <span>{item.label}</span>
-              </Trigger>
-              <Popup className="w-60 flex flex-col gap-2 p-3 bg-white/95 backdrop-blur-md border border-[#EAEAEA] shadow-xl rounded-xl">
+              </PreviewCardTrigger>
+              <PreviewCardPopup className="w-60 flex flex-col gap-2 p-3 bg-white/95 backdrop-blur-md border border-[#EAEAEA] shadow-xl rounded-xl">
                 <div className={`flex items-center gap-2 font-semibold mb-1 ${item.textColor}`}>
                   {item.icon}
                   {item.title}
@@ -88,9 +104,9 @@ export default function DiffLegend() {
                 <div className="text-xs text-gray-500 leading-relaxed">
                   {item.description}
                 </div>
-                <Arrow className="fill-white [&>path]:stroke-[#EAEAEA] stroke-[0.5]" />
-              </Popup>
-            </TriggerContainer>
+                <PreviewCardArrow className="fill-white [&>path]:stroke-[#EAEAEA] stroke-[0.5]" />
+              </PreviewCardPopup>
+            </PreviewCard>
           );
         })}
       </div>

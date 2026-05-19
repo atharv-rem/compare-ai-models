@@ -1,17 +1,9 @@
 import { DisplayPart } from "@/lib/markdown-diff";
 import {
-  PreviewCard,
-  PreviewCardPopup,
-  PreviewCardTrigger,
-  PreviewCardArrow,
-} from "./ui/preview-card";
-import {
-  Popover,
-  PopoverPopup,
-  PopoverTrigger,
-  PopoverArrow,
-} from "./ui/popover";
-import { useState, useEffect } from "react";
+  Drawer,
+  DrawerPopup,
+  DrawerTrigger,
+} from "./ui/drawer";
 
 function renderTokenText(tokens: DisplayPart["tokens"] | undefined) {
   if (!tokens) return "";
@@ -27,15 +19,6 @@ export function DiffTokens({
   activeGroupId: string | null;
   setActiveGroupId: (groupId: string | null) => void;
 }) {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.matchMedia("(max-width: 768px)").matches);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
   return (
     <>
       {parts.map((part, index) => {
@@ -43,32 +26,47 @@ export function DiffTokens({
         const isActive = Boolean(part.groupId && part.groupId === activeGroupId);
 
         if (part.replaced) {
-          const TriggerContainer = isMobile ? Popover : PreviewCard;
-          const Trigger = isMobile ? PopoverTrigger : PreviewCardTrigger;
-          const Popup = isMobile ? PopoverPopup : PreviewCardPopup;
-          const Arrow = isMobile ? PopoverArrow : PreviewCardArrow;
-
           return (
-            <TriggerContainer key={index}>
-              <Trigger
-                {...(!isMobile ? { delay: 200, closeDelay: 150 } : {})}
+            <Drawer key={index} position="bottom">
+              <DrawerTrigger
                 onMouseEnter={() => setActiveGroupId(part.groupId ?? null)}
                 onMouseLeave={() => setActiveGroupId(null)}
                 className={[
-                  "rounded px-1 transition-all duration-150 cursor-default outline-none inline-span",
+                  "rounded px-1 transition-all duration-150 cursor-pointer outline-none inline-span",
                   "bg-blue-200/85 text-blue-950",
                   isActive ? "ring-2 ring-black shadow-sm" : "",
                 ].join(" ")}
               >
                 {text}
-              </Trigger>
-              <Popup className="max-w-96 w-fit flex gap-2 p-2 bg-white/95 backdrop-blur-md border border-[#EAEAEA] shadow-xl rounded-xl z-50">
-                <div className="text-[12px] font-medium text-gray-800 leading-relaxed whitespace-pre-wrap">
-                  {renderTokenText(part.otherTokens)}
+              </DrawerTrigger>
+              <DrawerPopup variant="straight" className="flex flex-col gap-2 p-6 z-50">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="text-lg font-semibold text-gray-900 leading-none">Token Comparison</div>
                 </div>
-                <Arrow className="fill-white [&>path]:stroke-[#EAEAEA] stroke-[0.5]" />
-              </Popup>
-            </TriggerContainer>
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">This model</span>
+                    <span className="text-[10px] font-medium text-blue-600 bg-blue-50/50 px-1.5 py-0.5 rounded border border-blue-100/50 mb-0.5">
+                      {part.tokens.length} {part.tokens.length === 1 ? 'token' : 'tokens'}
+                    </span>
+                  </div>
+                  <div className="text-[14px] font-medium text-blue-900 bg-blue-50 p-2 rounded leading-relaxed whitespace-pre-wrap">
+                    {text}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Other model</span>
+                    <span className="text-[10px] font-medium text-gray-500 bg-gray-50/50 px-1.5 py-0.5 rounded border border-gray-200/50 mb-0.5">
+                      {part.otherTokens?.length ?? 0} {(part.otherTokens?.length ?? 0) === 1 ? 'token' : 'tokens'}
+                    </span>
+                  </div>
+                  <div className="text-[14px] font-medium text-gray-800 bg-gray-50 p-2 rounded leading-relaxed whitespace-pre-wrap">
+                    {renderTokenText(part.otherTokens)}
+                  </div>
+                </div>
+              </DrawerPopup>
+            </Drawer>
           );
         }
 

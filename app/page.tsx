@@ -31,6 +31,9 @@ export default function Home() {
   const [executionTimes, setExecutionTimes] = useState<{ [key: number]: { model1: number, model2: number } }>({
     1: { model1: 0, model2: 0 }
   });
+  const [timeToFirstByte, setTimeToFirstByte] = useState<{ [key: number]: { model1: number, model2: number } }>({
+    1: { model1: 0, model2: 0 }
+  });
   const [isClient, setIsClient] = useState(false);
 
   // Load from local storage
@@ -46,6 +49,7 @@ export default function Home() {
           if (parsed.tokenCounts) setTokenCounts(parsed.tokenCounts);
           if (parsed.tokensPerSecond) setTokensPerSecond(parsed.tokensPerSecond);
           if (parsed.executionTimes) setExecutionTimes(parsed.executionTimes);
+          if (parsed.timeToFirstByte) setTimeToFirstByte(parsed.timeToFirstByte);
           
           const current = parsed.chats.find((c: any) => c.id === (parsed.activeChat || 1));
           if (current) {
@@ -69,10 +73,11 @@ export default function Home() {
         activeChat,
         tokenCounts,
         tokensPerSecond,
-        executionTimes
+        executionTimes,
+        timeToFirstByte
       }));
     }
-  }, [chats, activeChat, tokenCounts, tokensPerSecond, executionTimes, isClient]);
+  }, [chats, activeChat, tokenCounts, tokensPerSecond, executionTimes, timeToFirstByte, isClient]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const gitCompareRef = useRef<{ startAnimation: () => void; stopAnimation: () => void }>(null);
@@ -153,12 +158,17 @@ export default function Home() {
         ? { ...chat, prompt: currentPromptValue, outputs: { model1: "", model2: "" } }
         : chat
     ));
+    setTimeToFirstByte(prev => ({
+      ...prev,
+      [activeChat]: { model1: 0, model2: 0 }
+    }));
 
     try {
       const readStream = async (reader: ReadableStreamDefaultReader<Uint8Array> | undefined, modelKey: "model1" | "model2") => {
         if (!reader) return;
         const decoder = new TextDecoder();
         const startTime = Date.now();
+        let recordedFirstByte = false;
         let currentTokenCount = 0;
         
         try {
@@ -167,6 +177,19 @@ export default function Home() {
             if (done) break;
             
             const chunk = decoder.decode(value, { stream: true });
+
+            if (!recordedFirstByte) {
+              const firstByteSeconds = (Date.now() - startTime) / 1000;
+              setTimeToFirstByte(prev => ({
+                ...prev,
+                [activeChat]: {
+                  ...prev[activeChat],
+                  [modelKey]: Number(firstByteSeconds.toFixed(3))
+                }
+              }));
+              recordedFirstByte = true;
+            }
+
             const newTokens = chunk.trim().split(/\s+/).filter(Boolean).length;
             currentTokenCount += newTokens;
 
@@ -270,7 +293,7 @@ export default function Home() {
 
   // Handle new chat button click
   const handleNewChat = () => {
-    const newChatId = chats.length + 1;
+    const newChatId = chats.length > 0 ? Math.max(...chats.map(c => c.id)) + 1 : 1;
     setChats(prev => [...prev, { id: newChatId, prompt: "", outputs: { model1: "", model2: "" } }]);
     setTokenCounts(prev => ({
       ...prev,
@@ -289,15 +312,49 @@ export default function Home() {
     setIsCompareMode(false);
   };
 
+  const handleDeleteChat = (id: number) => {
+    setChats(prev => {
+      const filtered = prev.filter(c => c.id !== id);
+      if (filtered.length === 0) {
+        // If no chats left, create a fresh one and exit compare mode
+        const newChat = { id: 1, prompt: "", outputs: { model1: "", model2: "" } };
+        setActiveChat(1);
+        setValue("");
+        setIsCompareMode(false);
+        return [newChat];
+      }
+      
+      // If we deleted the active chat, switch to another one
+      if (activeChat === id) {
+        const remainingChat = filtered[filtered.length - 1];
+        setActiveChat(remainingChat.id);
+        setValue(remainingChat.prompt);
+      }
+      return filtered;
+    });
+  };
+
+  const handleClearAll = () => {
+    setChats([{ id: 1, prompt: "", outputs: { model1: "", model2: "" } }]);
+    setTokenCounts({ 1: { model1: 0, model2: 0 } });
+    setTokensPerSecond({ 1: { model1: 0, model2: 0 } });
+    setExecutionTimes({ 1: { model1: 0, model2: 0 } });
+    setTimeToFirstByte({ 1: { model1: 0, model2: 0 } });
+    setActiveChat(1);
+    setValue("");
+    setIsCompareMode(false);
+  };
+
   const currentChat = chats.find(chat => chat.id === activeChat);
 
   return (
     <main 
-      className={`flex min-h-screen flex-col items-center px-4 py-8 transition-colors duration-500 ${isCompareMode ? "justify-start bg-white" : "justify-center"}`}
-      style={!isCompareMode ? { backgroundImage: "url('/background.png')", backgroundSize: "cover", backgroundPosition: "center" } : {}}
+      className={`flex min-h-screen flex-col items-center px-4 py-8 transition-colors duration-500 ${isCompareMode ? "justify-start bg-white" : "justify-center bg-[url('/background.png')] bg-cover bg-center"}`}
     >
       {!isCompareMode && (
-        <h1 className="text-[25px] font-main text-center">compare model outputs in realtime</h1>
+        <div className="flex flex-col items-center gap-4">
+          <h1 className="text-[25px] font-main text-center">compare model outputs in realtime</h1>
+        </div>
       )}
       
       <motion.div 
@@ -305,12 +362,14 @@ export default function Home() {
         animate={{ maxWidth: isCompareMode ? "72rem" : "48rem" }}
         transition={{ duration: 0.6, ease: "easeInOut" }}
       >
-        {isCompareMode && chats.length > 1 && (
+        {isCompareMode && chats.length > 0 && (
           <ChatTabs 
              chats={chats}
              activeChat={activeChat}
              setActiveChat={setActiveChat}
              setValue={setValue}
+             onDeleteChat={handleDeleteChat}
+             onClearAll={handleClearAll}
           />
         )}
 
@@ -321,6 +380,15 @@ export default function Home() {
           setIsFocused={setIsFocused}
           isListening={isListening}
           isCompareMode={isCompareMode}
+          hasPreviousChats={chats.some(chat => chat.outputs.model1 || chat.outputs.model2)}
+          onSeePreviousChats={() => {
+            const lastChatWithOutput = [...chats].reverse().find(c => c.outputs.model1 || c.outputs.model2);
+            if (lastChatWithOutput) {
+              setActiveChat(lastChatWithOutput.id);
+              setValue(lastChatWithOutput.prompt);
+            }
+            setIsCompareMode(true);
+          }}
           mockprompts={mockprompts}
           currentPrompt={currentPrompt}
           textareaRef={textareaRef}
@@ -339,6 +407,7 @@ export default function Home() {
           tokenCounts={tokenCounts[activeChat] || { model1: 0, model2: 0 }}
           tokensPerSecond={tokensPerSecond[activeChat] || { model1: 0, model2: 0 }}
           executionTimes={executionTimes[activeChat] || { model1: 0, model2: 0 }}
+          timeToFirstByte={timeToFirstByte[activeChat] || { model1: 0, model2: 0 }}
         />
       </motion.div>
     </main>

@@ -6,7 +6,7 @@ import mic from "../public/Vector.svg";
 import stop from "../public/stop.svg";
 import GitCompareIcon from "@/components/ui/compare-animated-icon";
 import AudioLinesIcon from "@/components/ui/listening-waveform";
-import { Plus } from "lucide-react";
+import { Plus, History } from "lucide-react";
 
 import {useEffect } from "react";
 
@@ -17,6 +17,8 @@ type PromptInputProps = {
   setIsFocused: (isFocused: boolean) => void;
   isListening: boolean;
   isCompareMode: boolean;
+  hasPreviousChats?: boolean;
+  onSeePreviousChats?: () => void;
   mockprompts: string[];
   currentPrompt: number;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
@@ -34,6 +36,8 @@ export function PromptInput({
   setIsFocused,
   isListening,
   isCompareMode,
+  hasPreviousChats,
+  onSeePreviousChats,
   mockprompts,
   currentPrompt,
   textareaRef,
@@ -139,6 +143,17 @@ export function PromptInput({
           </div>
 
           <div className="flex flex-row items-center gap-2">
+            {/* See previous chats button */}
+            {!isCompareMode && hasPreviousChats && (
+               <button
+                  onClick={onSeePreviousChats}
+                  className="flex flex-row items-center px-2 py-1 border-[1.5px] border-[#F5F5F5] rounded-[10px] gap-2 justify-center hover:bg-[#F5F5F5] focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none transition-colors text-[12px]"
+                >
+                  <History size={16} />
+                  See previous chats
+                </button>
+            )}
+
             {/* Compare button */}
             <button 
               onClick={handleCompareClick}
